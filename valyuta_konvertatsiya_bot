@@ -1,0 +1,87 @@
+from telegram import Update,KeyboardButton,ReplyKeyboardMarkup
+from telegram.ext import CallbackContext,CommandHandler,MessageHandler,Filters,Updater,ConversationHandler
+import requests
+
+currency = [
+    [KeyboardButton("🇺🇸 USD 💵")],[KeyboardButton("EUR 💶")],
+    [KeyboardButton("🇷🇺 RUB ₽")]
+]
+
+
+def start (update:Update,context:CallbackContext):
+    update.message.reply_text('Valyutani tanlang',reply_markup=ReplyKeyboardMarkup(currency,resize_keyboard=True))
+    return 1
+
+def converter(update:Update,context:CallbackContext):
+    if update.message.text in ("🇺🇸 USD 💵", "EUR 💶", "🇷🇺 RUB ₽"):
+        global code
+        code = ""
+        if update.message.text== "🇺🇸 USD 💵":
+            code="USD"
+        elif update.message.text== "EUR 💶":
+            code='EUR'
+        elif update.message.text== "🇷🇺 RUB ₽":
+            code='RUB'
+        url = 'https://cbu.uz/oz/arkhiv-kursov-valyut/json/'
+        responce = requests.get(url)
+        data = responce.json()
+        for i in data:
+            if i['Ccy'] == code:
+                valyuta=i['Rate']
+                update.message.reply_html(f'Hozirgi kurs: <b> { valyuta}</b>\n'
+                            
+                f'konvertatsiya summasini kirting: ')
+    return 2
+def hisobla(update:Update,context:CallbackContext):
+ msg =update.message.text
+
+ msg = float(msg)
+ url = 'https://cbu.uz/oz/arkhiv-kursov-valyut/json/'
+ responce = requests.get(url)
+ data = responce.json()
+ for i in data:
+     if i['Ccy'] ==code:
+         valyuta = i['Rate']
+         valyuta=float(valyuta)
+         f = valyuta * msg
+         d=round(f)
+         update.message.reply_html(f'<b>{msg}</b> $ = <b>{d}</b> uzs (so\'m)')
+         update.message.reply_text(f"Konvertatsiya summasini kiriting\n"
+                                   f"faqat usd $ da: ")
+     elif i['Ccy']==code=='EUR':
+         valyuta=i['Rate']
+         valyuta=float(valyuta)
+         f = valyuta * msg
+         d=round(f)
+         update.message.reply_text(f'{d} uzs (so\'m)')
+         update.message.reply_text(f"Konvertatsiya summasini kiriting\n"
+                                   f"faqat euro da: ")
+     elif i['Ccy']==code=='RUB':
+         valyuta=i['Rate']
+         valyuta=float(valyuta)
+         f=valyuta*msg
+         d=round(f)
+         update.message.reply_text(f'{d} uzs (so\'m)')
+         update.message.reply_text(f"Konvertatsiya summasini kiriting\n"
+                                   f"faqat RUB da: ")
+def main():
+    TOKEN = 'your token'
+    updater = Updater(TOKEN)
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start',start)],
+        states={
+            1 : [MessageHandler(Filters.text,converter)],
+            2: [MessageHandler(Filters.text,hisobla)],
+        },
+        fallbacks=[
+            CommandHandler("start", start)
+        ],
+    )
+    updater.dispatcher.add_handler(conv_handler)
+    updater.start_polling()
+    updater.idle()
+
+
+if __name__ == '__main__':
+    main()
